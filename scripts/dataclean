@@ -1,0 +1,40 @@
+import pandas as pd
+from sqlalchemy import create_engine
+from sqlalchemy.exc import SQLAlchemyError
+
+# Define your database connection string
+db_connection_url = "postgresql://gokulanvigneswaran:newpassword@localhost/f1_database"
+engine = create_engine(db_connection_url)
+
+def main():
+    try:
+        # Execute a test query to check direct table access
+        test_query = 'SELECT * FROM constructors LIMIT 1'
+        test_result = pd.read_sql_query(test_query, engine)
+        print("Test query successful, result:", test_result)
+
+        # Load data from CSV into a DataFrame
+        df = pd.read_csv('/Users/gokulanvigneswaran/f1db/archive/constructor_standings.csv')
+
+        # Fetch existing constructor IDs from the database
+        existing_ids = pd.read_sql_query('SELECT constructorId FROM constructors', engine)
+        print("Fetched IDs:", existing_ids)
+
+        # Filter the DataFrame to include only rows with existing constructor IDs
+        df = df[df['constructorId'].isin(existing_ids['constructorId'])]  # Make sure column names match
+
+        # Write the filtered DataFrame to the database
+        df.to_sql('constructor_standings', con=engine, if_exists='append', index=False)
+        print("Data successfully written to the database.")
+
+    except SQLAlchemyError as e:
+        print("SQLAlchemy Database error:", e)
+    except FileNotFoundError:
+        print("File not found. Please check the path to your CSV file.")
+    except Exception as e:
+        print("An error occurred:", e)
+    finally:
+        engine.dispose()
+
+if __name__ == "__main__":
+    main()
